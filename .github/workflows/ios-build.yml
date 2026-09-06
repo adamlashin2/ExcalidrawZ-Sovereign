@@ -44,6 +44,7 @@ jobs:
           -sdk iphonesimulator
           -destination 'generic/platform=iOS Simulator'
           -configuration Debug
+          -skipPackagePluginValidation
           CODE_SIGNING_ALLOWED=NO
           CODE_SIGNING_REQUIRED=NO
           build
