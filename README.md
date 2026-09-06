@@ -5,6 +5,12 @@
   <h3>A native Excalidraw client for macOS, iPadOS, and iOS. Powered by SwiftUI.</h3>
 </div>
 
+## Sovereign Native App fork
+
+This repository is the personal fork used by the Sovereign Native App Ecosystem. It keeps the native iPadOS/iOS client, uses the built-in WebDAV provider, and defaults the cloud connection form to the personal Nextcloud endpoint. Credentials are entered into the device Keychain and are never bundled into the app.
+
+The fork uses its own bundle identifiers (`com.adamlashin.sovereigndraw`) so it can be installed alongside the App Store build. The embedded Excalidraw core is built from the user-owned [`adamlashin2/excalidraw-core`](https://github.com/adamlashin2/excalidraw-core) fork by CI.
+
 ![GitHub](https://img.shields.io/github/license/chocoford/ExcalidrawZ) [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/cloudposse.svg?style=social&label=Follow%20%40Chocoford)](https://x.com/Chocoford_) [![Discord](https://img.shields.io/discord/944160092914319361)](https://discord.gg/aCv6w4HxDg)
 
 <a href="https://www.chocoford.com/donation" target="_blank"><img src="https://github.com/chocoford/chocoford/blob/main/public/Donation%20Button.png?raw=true" alt="Donation to Chocoford" style="height: 60px !important;"></a>

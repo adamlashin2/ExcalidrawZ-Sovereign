@@ -1,0 +1,49 @@
+name: iOS build
+
+on:
+  push:
+    branches: [main, 'sovereign/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulator-build:
+    name: Simulator build
+    runs-on: macos-15
+    steps:
+      - name: Check out app
+        uses: actions/checkout@v4
+
+      - name: Check out ExcalidrawZ core
+        uses: actions/checkout@v4
+        with:
+          repository: adamlashin2/excalidraw-core
+          ref: ExcalidrawZ-core
+          path: core
+          token: ${{ github.token }}
+
+      - name: Install core dependencies
+        working-directory: core
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Build embedded Excalidraw core
+        working-directory: core
+        run: |
+          yarn build
+          rm -rf ../ExcalidrawZ/Resources/excalidraw-latest
+          cp -R excalidraw-app/build ../ExcalidrawZ/Resources/excalidraw-latest
+
+      - name: Build for iOS Simulator
+        run: >-
+          xcodebuild
+          -project ExcalidrawZ.xcodeproj
+          -scheme ExcalidrawZ
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -configuration Debug
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          build
