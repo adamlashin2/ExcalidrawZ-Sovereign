@@ -48,6 +48,15 @@ jobs:
           </dict></plist>
           PLIST
 
+      - name: Set release version numbers
+        run: |
+          marketing_version="2.4.4"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            marketing_version="${GITHUB_REF_NAME#v}"
+          fi
+          echo "MARKETING_VERSION=$marketing_version" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
       - name: Verify Apple release credentials exist
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -87,6 +96,8 @@ jobs:
           -skipPackagePluginValidation
           DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
           CODE_SIGN_STYLE=Automatic
+          MARKETING_VERSION="$MARKETING_VERSION"
+          CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
           archive
 
       - name: Export signed IPA
