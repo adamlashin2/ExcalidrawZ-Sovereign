@@ -119,7 +119,13 @@
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>processing</string>
 		<string>remote-notification</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).cloud-storage-refresh</string>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).cloud-storage-processing</string>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
