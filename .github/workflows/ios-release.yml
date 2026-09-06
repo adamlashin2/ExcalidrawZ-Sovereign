@@ -1,0 +1,124 @@
+name: Sovereign Draw iOS release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Archive and publish Sovereign Draw
+    runs-on: macos-26
+    steps:
+      - name: Check out app
+        uses: actions/checkout@v4
+
+      - name: Check out user-owned Excalidraw core
+        uses: actions/checkout@v4
+        with:
+          repository: adamlashin2/excalidraw-core
+          ref: ExcalidrawZ-core
+          path: core
+          token: ${{ github.token }}
+
+      - name: Install core dependencies
+        working-directory: core
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Build embedded Excalidraw core
+        working-directory: core
+        run: |
+          yarn build
+          rm -rf ../ExcalidrawZ/Resources/excalidraw-latest
+          cp -R excalidraw-app/build ../ExcalidrawZ/Resources/excalidraw-latest
+
+      - name: Create non-secret build configuration
+        run: |
+          cat > Config/Secrets.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>COLLAB_URL</key><string>https://example.invalid</string>
+            <key>ONEDRIVE_CLIENT_ID</key><string></string>
+            <key>GOOGLE_DRIVE_IOS_CLIENT_ID</key><string></string>
+            <key>GOOGLE_DRIVE_MACOS_CLIENT_ID</key><string></string>
+          </dict></plist>
+          PLIST
+
+      - name: Verify Apple release credentials exist
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          test -n "$APPLE_TEAM_ID" || (echo "Missing APPLE_TEAM_ID" && exit 1)
+          test -n "$APP_STORE_CONNECT_KEY_ID" || (echo "Missing APP_STORE_CONNECT_KEY_ID" && exit 1)
+          test -n "$APP_STORE_CONNECT_ISSUER_ID" || (echo "Missing APP_STORE_CONNECT_ISSUER_ID" && exit 1)
+          test -n "$APP_STORE_CONNECT_PRIVATE_KEY" || (echo "Missing APP_STORE_CONNECT_PRIVATE_KEY" && exit 1)
+
+      - name: Prepare App Store Connect authentication
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$key_path"
+          echo "ASC_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - name: Archive for iOS devices
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: >-
+          xcodebuild
+          -project ExcalidrawZ.xcodeproj
+          -scheme ExcalidrawZ
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath "$RUNNER_TEMP/SovereignDraw.xcarchive"
+          -allowProvisioningUpdates
+          -authenticationKeyPath "$ASC_KEY_PATH"
+          -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID"
+          -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+          -skipPackagePluginValidation
+          DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+          CODE_SIGN_STYLE=Automatic
+          archive
+
+      - name: Export signed IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>destination</key><string>export</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/SovereignDraw.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v2
+        with:
+          app-path: ${{ runner.temp }}/export/ExcalidrawZ.ipa
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+
+      - name: Attach IPA to GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ runner.temp }}/export/ExcalidrawZ.ipa

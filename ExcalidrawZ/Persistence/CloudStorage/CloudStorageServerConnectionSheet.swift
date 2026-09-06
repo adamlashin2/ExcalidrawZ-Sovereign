@@ -6,6 +6,11 @@
 import SwiftUI
 
 struct CloudStorageServerConnectionSheet: View {
+    private enum PersonalEcosystemDefaults {
+        static let serverURL = "https://msi.tail8c6c74.ts.net:9443"
+        static let username = "adam"
+    }
+
     @Environment(\.dismiss) private var dismiss
 
     let providerName: String
@@ -13,8 +18,8 @@ struct CloudStorageServerConnectionSheet: View {
     let onSelectAccount: (CloudStorageAccount) async throws -> Void
     let onConnect: (CloudStorageServerCredentials) async throws -> Void
 
-    @State private var serverURL = "https://"
-    @State private var username = ""
+    @State private var serverURL = PersonalEcosystemDefaults.serverURL
+    @State private var username = PersonalEcosystemDefaults.username
     @State private var password = ""
     @State private var isConnecting = false
     @State private var openingAccountID: CloudStorageAccountID?

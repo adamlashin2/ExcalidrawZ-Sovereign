@@ -1,0 +1,4 @@
+// Copy this file to Overrides.xcconfig for local signing.
+// Never commit the copied file or Apple credentials.
+DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID
+ICLOUD_CONTAINER = iCloud.com.adamlashin2.sovereigndraw

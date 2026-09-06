@@ -1,0 +1,64 @@
+name: iOS build
+
+on:
+  push:
+    branches: [main, 'sovereign/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulator-build:
+    name: Simulator build
+    runs-on: macos-26
+    steps:
+      - name: Check out app
+        uses: actions/checkout@v4
+
+      - name: Check out ExcalidrawZ core
+        uses: actions/checkout@v4
+        with:
+          repository: adamlashin2/excalidraw-core
+          ref: ExcalidrawZ-core
+          path: core
+          token: ${{ github.token }}
+
+      - name: Install core dependencies
+        working-directory: core
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Build embedded Excalidraw core
+        working-directory: core
+        run: |
+          yarn build
+          rm -rf ../ExcalidrawZ/Resources/excalidraw-latest
+          cp -R excalidraw-app/build ../ExcalidrawZ/Resources/excalidraw-latest
+
+      - name: Create non-secret build configuration
+        run: |
+          cat > Config/Secrets.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>COLLAB_URL</key><string>https://example.invalid</string>
+            <key>ONEDRIVE_CLIENT_ID</key><string></string>
+            <key>GOOGLE_DRIVE_IOS_CLIENT_ID</key><string></string>
+            <key>GOOGLE_DRIVE_MACOS_CLIENT_ID</key><string></string>
+          </dict></plist>
+          PLIST
+
+      - name: Build for iOS Simulator
+        run: >-
+          xcodebuild
+          -project ExcalidrawZ.xcodeproj
+          -scheme ExcalidrawZ
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -configuration Debug
+          -skipPackagePluginValidation
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          ONLY_ACTIVE_ARCH=YES
+          build
