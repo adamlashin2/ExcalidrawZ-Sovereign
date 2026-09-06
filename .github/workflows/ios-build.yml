@@ -36,6 +36,19 @@ jobs:
           rm -rf ../ExcalidrawZ/Resources/excalidraw-latest
           cp -R excalidraw-app/build ../ExcalidrawZ/Resources/excalidraw-latest
 
+      - name: Create non-secret build configuration
+        run: |
+          cat > Config/Secrets.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>COLLAB_URL</key><string>https://example.invalid</string>
+            <key>ONEDRIVE_CLIENT_ID</key><string></string>
+            <key>GOOGLE_DRIVE_IOS_CLIENT_ID</key><string></string>
+            <key>GOOGLE_DRIVE_MACOS_CLIENT_ID</key><string></string>
+          </dict></plist>
+          PLIST
+
       - name: Build for iOS Simulator
         run: >-
           xcodebuild
