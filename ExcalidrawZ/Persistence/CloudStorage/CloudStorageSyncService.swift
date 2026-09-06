@@ -46,6 +46,36 @@ final class CloudStorageSyncService {
         startIfNeeded(connections: connections)
     }
 
+    /// Performs one bounded reconciliation pass for OS-managed background
+    /// execution. The normal process-lifetime loop remains responsible for
+    /// continuous foreground synchronization.
+    func synchronizeOnce(
+        connections: CloudStorageConnectionStore? = nil
+    ) async {
+        let connections = connections ?? .shared
+        connectivity.startIfNeeded()
+        await CloudStorageBootstrap.registerConfiguredProviders()
+        await connections.refresh(reloadAfterCurrent: true)
+        guard connectivity.canAttemptNetworkRequests else { return }
+
+        for location in connections.locations {
+            guard !Task.isCancelled else { return }
+            guard await documentStore.refresh(
+                location,
+                connections: connections,
+                force: true
+            ) else { continue }
+            documentStore.scheduleDocumentSynchronizations(
+                in: location,
+                excludingDocumentIDs: Set(activeDocumentObservers.keys),
+                connections: connections,
+                priority: .background
+            )
+        }
+
+        await documentStore.waitForContentSynchronizationsToIdle()
+    }
+
     /// Prevents the global cache updater from replacing a document currently
     /// owned by an Editor, while asking that Editor to perform a safe remote
     /// check periodically. The Editor remains responsible for unsaved-change

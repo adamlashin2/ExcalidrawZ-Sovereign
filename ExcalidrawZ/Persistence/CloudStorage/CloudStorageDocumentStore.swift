@@ -825,6 +825,27 @@ final class CloudStorageDocumentStore: ObservableObject {
         processContentSynchronizationQueue()
     }
 
+    /// Allows an OS-managed background task to wait until the work it
+    /// admitted to the queue has either completed or been handed to a retry.
+    /// The deadline is owned by BGTaskScheduler; cancellation therefore
+    /// stops the wait without disturbing the persisted cache state.
+    func waitForContentSynchronizationsToIdle() async {
+        while !Task.isCancelled {
+            if contentSynchronizationQueue.isEmpty,
+               contentSynchronizationTasks.isEmpty,
+               retryUploadTasks.isEmpty,
+               saveTasks.isEmpty {
+                return
+            }
+
+            do {
+                try await Task.sleep(nanoseconds: 100_000_000)
+            } catch {
+                return
+            }
+        }
+    }
+
     /// Reconciles the provider index with the device cache. Background scans
     /// eventually mirror remote documents locally; visible folders can raise
     /// their pending work to user-initiated priority.
