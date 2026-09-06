@@ -50,8 +50,9 @@ final class CloudStorageSyncService {
     /// execution. The normal process-lifetime loop remains responsible for
     /// continuous foreground synchronization.
     func synchronizeOnce(
-        connections: CloudStorageConnectionStore = .shared
+        connections: CloudStorageConnectionStore? = nil
     ) async {
+        let connections = connections ?? .shared
         connectivity.startIfNeeded()
         await CloudStorageBootstrap.registerConfiguredProviders()
         await connections.refresh(reloadAfterCurrent: true)

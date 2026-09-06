@@ -290,12 +290,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         registerBackgroundTasks()
-        scheduleBackgroundTasks()
+        Self.scheduleBackgroundTasks()
         return true
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
-        scheduleBackgroundTasks()
+        Self.scheduleBackgroundTasks()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
@@ -317,7 +317,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 
-    private func scheduleBackgroundTasks() {
+    private static func scheduleBackgroundTasks() {
         let refreshRequest = BGAppRefreshTaskRequest(
             identifier: Self.backgroundRefreshTaskIdentifier
         )
