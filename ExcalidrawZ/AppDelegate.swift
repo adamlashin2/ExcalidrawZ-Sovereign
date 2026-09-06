@@ -278,11 +278,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     private static let backgroundProcessingSuffix = ".cloud-storage-processing"
 
     private static var backgroundRefreshTaskIdentifier: String {
-        "\(Bundle.main.bundleIdentifier ?? \"com.adamlashin.sovereigndraw\")\(backgroundRefreshSuffix)"
+        "\(Bundle.main.bundleIdentifier ?? "com.adamlashin.sovereigndraw")\(backgroundRefreshSuffix)"
     }
 
     private static var backgroundProcessingTaskIdentifier: String {
-        "\(Bundle.main.bundleIdentifier ?? \"com.adamlashin.sovereigndraw\")\(backgroundProcessingSuffix)"
+        "\(Bundle.main.bundleIdentifier ?? "com.adamlashin.sovereigndraw")\(backgroundProcessingSuffix)"
     }
 
     func application(
