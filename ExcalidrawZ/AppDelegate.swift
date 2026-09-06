@@ -270,8 +270,78 @@ private extension NSApplication {
 
 #elseif os(iOS)
 import UIKit
+import BackgroundTasks
 class AppDelegate: NSObject, UIApplicationDelegate {
     let logger = Logger(label: "AppDelegate")
+
+    private static let backgroundRefreshSuffix = ".cloud-storage-refresh"
+    private static let backgroundProcessingSuffix = ".cloud-storage-processing"
+
+    private static var backgroundRefreshTaskIdentifier: String {
+        "\(Bundle.main.bundleIdentifier ?? \"com.adamlashin.sovereigndraw\")\(backgroundRefreshSuffix)"
+    }
+
+    private static var backgroundProcessingTaskIdentifier: String {
+        "\(Bundle.main.bundleIdentifier ?? \"com.adamlashin.sovereigndraw\")\(backgroundProcessingSuffix)"
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        registerBackgroundTasks()
+        scheduleBackgroundTasks()
+        return true
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        scheduleBackgroundTasks()
+    }
+
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        CloudStorageSyncService.shared.start()
+    }
+
+    private func registerBackgroundTasks() {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.backgroundRefreshTaskIdentifier,
+            using: nil
+        ) { task in
+            Self.handleBackgroundSync(task)
+        }
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.backgroundProcessingTaskIdentifier,
+            using: nil
+        ) { task in
+            Self.handleBackgroundSync(task)
+        }
+    }
+
+    private func scheduleBackgroundTasks() {
+        let refreshRequest = BGAppRefreshTaskRequest(
+            identifier: Self.backgroundRefreshTaskIdentifier
+        )
+        refreshRequest.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        try? BGTaskScheduler.shared.submit(refreshRequest)
+
+        let processingRequest = BGProcessingTaskRequest(
+            identifier: Self.backgroundProcessingTaskIdentifier
+        )
+        processingRequest.requiresNetworkConnectivity = true
+        processingRequest.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
+        try? BGTaskScheduler.shared.submit(processingRequest)
+    }
+
+    private static func handleBackgroundSync(_ task: BGTask) {
+        scheduleBackgroundTasks()
+        let work = Task { @MainActor in
+            await CloudStorageSyncService.shared.synchronizeOnce()
+            task.setTaskCompleted(success: !Task.isCancelled)
+        }
+        task.expirationHandler = {
+            work.cancel()
+        }
+    }
 
     func application(
         _ application: UIApplication,
